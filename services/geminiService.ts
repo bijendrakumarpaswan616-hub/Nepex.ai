@@ -1,7 +1,6 @@
-import { GoogleGenAI, Message as GeminiMessage, Modality, Part, GenerateContentParameters } from "@google/genai";
+import { GoogleGenAI, Message as GeminiMessage, Modality, Part } from "@google/genai";
 import type { Message as AppMessage } from '../types';
 
-// A single GoogleGenAI instance can be reused.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const mapAppMessagesToGeminiHistory = (messages: AppMessage[]): GeminiMessage[] => {
@@ -57,9 +56,7 @@ export const sendMessageStream = async (
       throw new Error("Cannot send an empty message.");
   }
   
-  const messagePayload: GenerateContentParameters = { parts: content };
-
-  const stream = await chat.sendMessageStream({ message: messagePayload });
+  const stream = await chat.sendMessageStream({ message: content });
   return stream;
 };
 
