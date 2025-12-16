@@ -1,9 +1,18 @@
-import { GoogleGenAI, Message as GeminiMessage, Modality, Part } from "@google/genai";
+
+import { GoogleGenAI, Content, Modality, Part, GenerateContentParameters } from "@google/genai";
 import type { Message as AppMessage } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAiClient = () => {
+    // Priority: 1. Env Var (Deployment) 2. LocalStorage (User entered)
+    const apiKey = process.env.API_KEY || localStorage.getItem('nepex-api-key') || '';
+    
+    if (!apiKey) {
+        throw new Error("API_KEY_MISSING");
+    }
+    return new GoogleGenAI({ apiKey });
+};
 
-const mapAppMessagesToGeminiHistory = (messages: AppMessage[]): GeminiMessage[] => {
+const mapAppMessagesToGeminiHistory = (messages: AppMessage[]): Content[] => {
     // Filter out empty messages that might exist during streaming
     const validMessages = messages.filter(msg => msg.text || msg.attachment);
     return validMessages.map(msg => {
@@ -32,6 +41,7 @@ export const sendMessageStream = async (
     message: string,
     attachment?: { data: string; mimeType: string }
 ) => {
+  const ai = getAiClient();
   const geminiHistory = mapAppMessagesToGeminiHistory(history);
   const chat = ai.chats.create({
     model: 'gemini-2.5-flash',
@@ -56,13 +66,16 @@ export const sendMessageStream = async (
       throw new Error("Cannot send an empty message.");
   }
   
-  const stream = await chat.sendMessageStream({ message: content });
+  const messagePayload: GenerateContentParameters = { parts: content };
+
+  const stream = await chat.sendMessageStream({ message: messagePayload });
   return stream;
 };
 
 
 export const generateTextToSpeech = async (text: string): Promise<string | null> => {
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: `Say: ${text}` }] }],
@@ -86,6 +99,7 @@ export const generateTextToSpeech = async (text: string): Promise<string | null>
 
 export const generateImage = async (prompt: string): Promise<string | null> => {
     try {
+        const ai = getAiClient();
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,

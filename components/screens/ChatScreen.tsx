@@ -94,11 +94,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onLogout }) => {
       }
       playSound('receive');
       addLog('MESSAGE', 'AI generated response');
-    } catch (error) {
+    } catch (error: any) {
       console.error("API Error:", error);
       playSound('error');
+      
+      let errorMessage = "Connection error. Please try again.";
+      if (error.message === 'API_KEY_MISSING') {
+          errorMessage = "Please set your API Key in Settings to continue.";
+          setSettingsOpen(true); // Auto-open settings if key is missing
+      }
+      
       setConversations(prev => prev.map(c => c.id === activeConversationId ? {
-          ...c, messages: c.messages.map(m => m.id === assistantMessageId ? { ...m, text: "Connection error. Please try again." } : m)
+          ...c, messages: c.messages.map(m => m.id === assistantMessageId ? { ...m, text: errorMessage } : m)
       } : c));
     } finally { setIsTyping(false); }
   }, [activeConversationId, settings.persona, playSound]);
@@ -125,10 +132,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onLogout }) => {
         playSound('receive');
         addLog('MESSAGE', 'AI generated image');
       } else { throw new Error('No data'); }
-    } catch (e) {
+    } catch (e: any) {
       playSound('error');
+      let errorMessage = "Could not generate image.";
+      if (e.message === 'API_KEY_MISSING') {
+          errorMessage = "Please set your API Key in Settings to generate images.";
+          setSettingsOpen(true);
+      }
       setConversations(prev => prev.map(c => c.id === activeConversationId ? {
-          ...c, messages: c.messages.map(m => m.id === assistantMessageId ? { ...m, generating: false, text: "Could not generate image." } : m)
+          ...c, messages: c.messages.map(m => m.id === assistantMessageId ? { ...m, generating: false, text: errorMessage } : m)
       } : c));
     } finally { setIsTyping(false); }
   }, [activeConversationId, playSound]);
@@ -199,6 +211,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onLogout }) => {
     else await executeSendMessage(historyForApi, lastUserMsg);
   }, [activeConversation, activeConversationId, isTyping, executeSendMessage, executeImageGeneration]);
 
+  // Check for API key on mount and show banner if missing
+  const hasApiKey = process.env.API_KEY || localStorage.getItem('nepex-api-key');
+
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-[#0F1724] transition-colors duration-300">
       <Sidebar
@@ -219,11 +234,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onLogout }) => {
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header className="flex-shrink-0 flex items-center justify-between p-4 h-16 border-b border-slate-200 dark:border-slate-700/50 bg-white/80 dark:bg-[#0F1724]/80 backdrop-blur-sm z-10">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 dark:text-gray-300"><MenuIcon className="w-6 h-6" /></button>
-          <h2 className="text-lg font-bold bg-gradient-to-r from-[#2EE6C8] to-[#FFD66B] bg-clip-text text-transparent truncate">
-            {activeConversation?.title || 'Nepex.ai'}
-          </h2>
+          <div className="flex flex-col items-center">
+             <h2 className="text-lg font-bold bg-gradient-to-r from-[#2EE6C8] to-[#FFD66B] bg-clip-text text-transparent truncate">
+                {activeConversation?.title || 'Nepex.ai'}
+             </h2>
+          </div>
           <button onClick={() => setSettingsOpen(true)} className="p-2 text-slate-600 dark:text-gray-300"><SettingsIcon className="w-6 h-6" /></button>
         </header>
+        
+        {!hasApiKey && (
+             <div className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-4 py-2 text-sm text-center">
+                 ⚠️ No API Key found. Please add your Gemini API Key in <button onClick={() => setSettingsOpen(true)} className="underline font-bold">Settings</button> to start chatting.
+             </div>
+        )}
 
         <ChatWindow
           conversation={activeConversation}

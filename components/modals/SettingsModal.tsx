@@ -1,7 +1,8 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import type { Settings } from '../../types';
-import { SunIcon, MoonIcon, LaptopIcon } from '../assets/Icons';
+import { SunIcon, MoonIcon, LaptopIcon, ShieldIcon, CheckIcon } from '../assets/Icons';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -31,15 +32,59 @@ const ThemeButton: React.FC<ThemeButtonProps> = ({ label, icon, isActive, onClic
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const { settings, setSettings } = useSettings();
+  const [apiKey, setApiKey] = useState('');
+  const [isKeySaved, setIsKeySaved] = useState(false);
+
+  useEffect(() => {
+    const storedKey = localStorage.getItem('nepex-api-key');
+    if (storedKey) setApiKey(storedKey);
+  }, []);
 
   const handleSettingChange = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleSaveApiKey = () => {
+    if (apiKey.trim()) {
+        localStorage.setItem('nepex-api-key', apiKey.trim());
+        setIsKeySaved(true);
+        setTimeout(() => setIsKeySaved(false), 2000);
+    } else {
+        localStorage.removeItem('nepex-api-key');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-[#0F1724] border border-slate-200 dark:border-slate-700/50 rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-[#0F1724] border border-slate-200 dark:border-slate-700/50 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-gray-100">Settings</h2>
+
+        {/* API Key Configuration */}
+        <div className="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-2 text-slate-900 dark:text-gray-100 font-bold">
+                <ShieldIcon className="w-5 h-5 text-teal-500" />
+                <h3>API Configuration</h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-gray-400 mb-3">
+                Required for the AI to work. Your key is stored locally on your device.
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-teal-500 hover:underline ml-1">Get free Gemini API Key</a>
+            </p>
+            <div className="flex gap-2">
+                <input 
+                    type="password" 
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Paste your Gemini API Key here (AIza...)"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 outline-none"
+                />
+                <button 
+                    onClick={handleSaveApiKey}
+                    className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[3rem]"
+                >
+                    {isKeySaved ? <CheckIcon className="w-5 h-5" /> : 'Save'}
+                </button>
+            </div>
+        </div>
 
         {/* Theme Selector */}
         <div className="mb-6">
