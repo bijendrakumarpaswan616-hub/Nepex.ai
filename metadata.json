@@ -1,0 +1,8 @@
+{
+  "name": "Nepex.ai",
+  "description": "Nepex.ai is your personal AI companion. Chat, write, code, and learn with a smooth, delightful assistant. Sign in, customize, and get help anytime.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
